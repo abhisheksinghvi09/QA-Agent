@@ -1,0 +1,14 @@
+UI/UX Guidelines for Checkout Page
+
+1. Form Validation
+   - If a required field is empty or invalid, an error message must be displayed.
+   - Error text color must be RED (Hex: #FF0000 or standard CSS 'red').
+   - Error messages should appear immediately below the invalid field.
+
+2. Buttons
+   - The "Pay Now" button must be GREEN to signify a primary action.
+   - The "Apply" button for coupons should be standard default style or visible next to the input.
+
+3. Success State
+   - Upon successful form submission, the message "Payment Successful!" must appear.
+   - The success message text color must be GREEN.

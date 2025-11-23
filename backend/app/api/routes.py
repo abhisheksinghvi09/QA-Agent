@@ -1,0 +1,98 @@
+import os
+import shutil
+import uuid
+from typing import List, Optional
+from fastapi import APIRouter, UploadFile, File, HTTPException, Header, BackgroundTasks
+
+from app.services.ingestion import IngestionService
+from app.services.rag_agent import TestGenAgent
+from app.services.selenium_agent import SeleniumAgent
+from app.core.config import settings
+from app.core.logger import get_logger
+
+router = APIRouter()
+logger = get_logger("api_routes")
+
+ingestion_service = IngestionService()
+selenium_agent = SeleniumAgent() 
+
+from pydantic import BaseModel
+
+class TestGenerationRequest(BaseModel):
+    query: str
+    session_id: str
+
+class ScriptGenerationRequest(BaseModel):
+    test_case: str
+    session_id: str 
+
+@router.get("/health")
+async def health_check():
+    return {"status": "operational", "version": "2.0"}
+
+@router.post("/session/start")
+async def start_session():
+    new_id = str(uuid.uuid4())
+    logger.info(f"New session started: {new_id}")
+    return {"session_id": new_id}
+
+@router.post("/ingest")
+async def ingest_documents(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    session_id: str = Header(None)
+):
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Session-ID header required")
+
+    session_upload_dir = os.path.join(settings.UPLOAD_DIR, session_id)
+    os.makedirs(session_upload_dir, exist_ok=True)
+    
+    saved_paths = []
+    try:
+        for file in files:
+            file_path = os.path.join(session_upload_dir, file.filename)
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            saved_paths.append(file_path)
+        
+        result = ingestion_service.process_documents(session_id, saved_paths)
+        
+        return result
+    except Exception as e:
+        logger.error(f"Ingestion failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate-tests")
+async def generate_tests(request: TestGenerationRequest):
+    try:
+        agent = TestGenAgent(session_id=request.session_id)
+        result = agent.generate_tests(request.query)
+        return {"result": result}
+    except Exception as e:
+        logger.error(f"Test Gen Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate-script")
+async def generate_script(request: ScriptGenerationRequest):
+    try:
+        html_path = os.path.join(settings.ASSETS_DIR, "checkout.html")
+        
+        logger.info(f"Looking for HTML at: {os.path.abspath(html_path)}")
+        
+        if not os.path.exists(html_path):
+            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            project_root = os.path.dirname(backend_dir)
+            html_path = os.path.join(project_root, "assets", "checkout.html")
+
+        if not os.path.exists(html_path):
+             raise HTTPException(status_code=404, detail=f"checkout.html not found at {html_path}")
+            
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+            
+        script = selenium_agent.generate_script(request.test_case, html_content)
+        return {"script": script}
+    except Exception as e:
+        logger.error(f"Script Gen Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
