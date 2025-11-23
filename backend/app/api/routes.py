@@ -14,7 +14,7 @@ router = APIRouter()
 logger = get_logger("api_routes")
 
 ingestion_service = IngestionService()
-selenium_agent = SeleniumAgent() 
+# selenium_agent = SeleniumAgent() 
 
 from pydantic import BaseModel
 
@@ -75,24 +75,47 @@ async def generate_tests(request: TestGenerationRequest):
 
 @router.post("/generate-script")
 async def generate_script(request: ScriptGenerationRequest):
+    """
+    Phase 3: RAG-Enhanced Selenium Agent
+    1. LOCATE the HTML file uploaded by THIS specific user (Session ID).
+    2. Initialize the Agent with the Session ID (to access the Vector DB for rules).
+    3. Generate the script using the User's HTML + User's Rules.
+    """
     try:
-        html_path = os.path.join(settings.ASSETS_DIR, "checkout.html")
+        # 1. Define the path to this session's upload folder
+        session_upload_dir = os.path.join(settings.UPLOAD_DIR, request.session_id)
         
-        logger.info(f"Looking for HTML at: {os.path.abspath(html_path)}")
+        # 2. Find the HTML file in that folder
+        html_content = None
+        html_filename = "checkout.html" # Default name, or we can scan for any .html
         
-        if not os.path.exists(html_path):
-            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            project_root = os.path.dirname(backend_dir)
-            html_path = os.path.join(project_root, "assets", "checkout.html")
-
-        if not os.path.exists(html_path):
-             raise HTTPException(status_code=404, detail=f"checkout.html not found at {html_path}")
+        if os.path.exists(session_upload_dir):
+            # Scan for any .html file in the session folder
+            for file in os.listdir(session_upload_dir):
+                if file.lower().endswith(".html"):
+                    found_path = os.path.join(session_upload_dir, file)
+                    logger.info(f"Session {request.session_id}: Found HTML target -> {file}")
+                    
+                    with open(found_path, "r", encoding="utf-8") as f:
+                        html_content = f.read()
+                    break # Stop after finding the first HTML file
+        
+        # 3. Error Handling: If the user never uploaded an HTML file
+        if not html_content:
+            msg = "No HTML file found for this session. Please go to Tab 1 and upload your target HTML file."
+            logger.warning(f"Session {request.session_id}: {msg}")
+            raise HTTPException(status_code=404, detail=msg)
             
-        with open(html_path, "r", encoding="utf-8") as f:
-            html_content = f.read()
-            
-        script = selenium_agent.generate_script(request.test_case, html_content)
+        # 4. Initialize Agent (Connects to the User's Vector DB for Rules)
+        agent = SeleniumAgent(session_id=request.session_id)
+        
+        # 5. Generate Script
+        script = agent.generate_script(request.test_case, html_content)
+        
         return {"script": script}
+        
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Script Gen Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
