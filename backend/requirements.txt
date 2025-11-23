@@ -10,12 +10,14 @@ langchain-chroma
 chromadb>=0.4.0
 pymupdf
 tiktoken
-langchain-huggingface
+# We keep these API clients
 langchain-groq
 langchain-openai
+# We REMOVE langchain-huggingface, torch, transformers to save RAM
 selenium>=4.10.0
 webdriver-manager
 beautifulsoup4
 unstructured
 markdown
-sentence-transformers
+# We remove sentence-transformers
+requests

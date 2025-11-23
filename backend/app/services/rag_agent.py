@@ -2,7 +2,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 
@@ -14,8 +14,14 @@ logger = get_logger("rag_agent")
 class TestGenAgent:
     def __init__(self, session_id: str):
         self.session_id = session_id
-        
-        self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+        if not settings.OPENAI_API_KEY:
+             raise ValueError("OPENAI_API_KEY is missing in .env config")
+             
+        self.embeddings = OpenAIEmbeddings(
+            model="text-embedding-3-small",
+            api_key=settings.OPENAI_API_KEY
+        )
         
         self.vector_store = Chroma(
             collection_name=f"session_{session_id}", 

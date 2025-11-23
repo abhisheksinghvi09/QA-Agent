@@ -7,7 +7,8 @@ from langchain_community.document_loaders import (
 )
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from app.core.config import settings
+from langchain_openai import OpenAIEmbeddings
 from app.core.config import settings
 from app.core.logger import get_logger
 
@@ -15,7 +16,17 @@ logger = get_logger("ingestion_service")
 
 class IngestionService:
     def __init__(self):
-        self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        if not settings.OPENAI_API_KEY:
+             raise ValueError("OPENAI_API_KEY is missing in .env config")
+             
+        self.embeddings = OpenAIEmbeddings(
+            model="text-embedding-3-small",
+            api_key=settings.OPENAI_API_KEY
+        )
+        self.vector_store = Chroma(
+            persist_directory=settings.VECTOR_DB_PATH,
+            embedding_function=self.embeddings
+        )
 
     def _get_loader(self, file_path: str):
         ext = os.path.splitext(file_path)[1].lower()
