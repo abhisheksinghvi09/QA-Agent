@@ -82,15 +82,11 @@ async def generate_script(request: ScriptGenerationRequest):
     3. Generate the script using the User's HTML + User's Rules.
     """
     try:
-        # 1. Define the path to this session's upload folder
         session_upload_dir = os.path.join(settings.UPLOAD_DIR, request.session_id)
-        
-        # 2. Find the HTML file in that folder
         html_content = None
-        html_filename = "checkout.html" # Default name, or we can scan for any .html
+        html_filename = "checkout.html"
         
         if os.path.exists(session_upload_dir):
-            # Scan for any .html file in the session folder
             for file in os.listdir(session_upload_dir):
                 if file.lower().endswith(".html"):
                     found_path = os.path.join(session_upload_dir, file)
@@ -98,18 +94,15 @@ async def generate_script(request: ScriptGenerationRequest):
                     
                     with open(found_path, "r", encoding="utf-8") as f:
                         html_content = f.read()
-                    break # Stop after finding the first HTML file
-        
-        # 3. Error Handling: If the user never uploaded an HTML file
+                    break
+
         if not html_content:
             msg = "No HTML file found for this session. Please go to Tab 1 and upload your target HTML file."
             logger.warning(f"Session {request.session_id}: {msg}")
             raise HTTPException(status_code=404, detail=msg)
             
-        # 4. Initialize Agent (Connects to the User's Vector DB for Rules)
         agent = SeleniumAgent(session_id=request.session_id)
-        
-        # 5. Generate Script
+
         script = agent.generate_script(request.test_case, html_content)
         
         return {"script": script}
