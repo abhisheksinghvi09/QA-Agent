@@ -14,6 +14,8 @@
 
 Deployed Link: https://qualityassurance.streamlit.app
 
+Demo Video: [Link](https://drive.google.com/file/d/1tJDNwttINtiZHiJVZelj92ZDV1stdBl4/view?usp=sharing)
+
 ---
 
 ## 🚀 Key Features
