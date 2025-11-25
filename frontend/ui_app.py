@@ -46,12 +46,12 @@ with st.sidebar:
     st.markdown("---")
     
     if st.session_state.session_ready:
-        st.success("● System Operational")
+        st.success("System Operational")
         st.caption(f"Session: `{st.session_state.session_id[:8]}...`")
     else:
-        st.error("● Backend Offline")
+        st.error("Backend Offline")
         st.warning("Please ensure the API server is running.")
-        if st.button("♻️ Retry Connection"):
+        if st.button("Retry Connection"):
             st.rerun()
             
     st.markdown("#### Workflow")
@@ -70,9 +70,9 @@ if not st.session_state.session_ready:
     st.stop()
 
 tab_ingest, tab_plan, tab_code = st.tabs([
-    "📂 1. Knowledge Base", 
-    "🧠 2. Test Planning", 
-    "🤖 3. Script Generation"
+    "1. Knowledge Base", 
+    "2. Test Planning", 
+    "3. Script Generation"
 ])
 
 with tab_ingest:
@@ -88,17 +88,17 @@ with tab_ingest:
         )
     
     with col2:
-        st.info("💡 **Tip:** Ensure you upload `checkout.html` and at least one requirement document (e.g., `product_specs.md`).")
+        st.info("**Tip:** Ensure you upload `checkout.html` and at least one requirement document (e.g., `product_specs.md`).")
 
-    if uploaded_files and st.button("🚀 Build Knowledge Base", type="primary"):
+    if uploaded_files and st.button("Build Knowledge Base", type="primary"):
         with st.spinner("Processing documents & vectorizing content..."):
             result = st.session_state.api.upload_documents(uploaded_files)
             
             if result["success"]:
-                st.success(f"✅ Success! {result['data']['message']}")
+                st.success(f"Success! {result['data']['message']}")
                 st.session_state.knowledge_base_built = True
             else:
-                st.error(f"❌ Error: {result['error']}")
+                st.error(f"Error: {result['error']}")
 
 with tab_plan:
     st.header("Generate Test Plan")
@@ -115,7 +115,7 @@ with tab_plan:
             help="Be specific about what feature you want to verify."
         )
         
-        if st.button("🧠 Generate Test Cases", type="primary"):
+        if st.button("Generate Test Cases", type="primary"):
             with st.spinner("Analyzing requirements..."):
                 result = st.session_state.api.generate_test_plan(user_query)
                 
@@ -133,7 +133,7 @@ with tab_code:
     st.header("Generate Automation Script")
     
     if not st.session_state.get("knowledge_base_built"):
-         st.warning("⚠️ Please build the Knowledge Base in Tab 1 first.")
+         st.warning("Please build the Knowledge Base in Tab 1 first.")
     else:
         st.markdown("Paste a specific test scenario to convert it into Python Selenium code.")
         
@@ -143,7 +143,7 @@ with tab_code:
             height=100
         )
         
-        if st.button("⚡ Write Selenium Code", type="primary"):
+        if st.button("Write Selenium Code", type="primary"):
             if not test_case_input:
                 st.error("Please provide a test scenario.")
             else:
